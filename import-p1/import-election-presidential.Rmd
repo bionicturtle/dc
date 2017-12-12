@@ -1,0 +1,93 @@
+---
+title: "Import Election-Presidential"
+output: html_notebook
+---
+
+These data files contain election results for both the 2012 and 2016 US Presidential Elections, include proportions of votes cast for Romney, Obama (2012) and Trump, Clinton (2016). 
+
+The election results were obtained from this Git repository: https://github.com/tonmcg/County_Level_Election_Results_12-16
+
+The county facts data was obtained from another Kaggle election data set: https://www.kaggle.com/benhamner/2016-us-election
+
+```{r}
+library(choroplethr)
+library(choroplethrMaps)
+library(data.table); library(dplyr)
+
+path_county_facts <- file.path("data/election-president-2016","county_facts.csv")
+path_county_dic <- file.path("data/election-president-2016","county_facts_dictionary.csv")
+county_facts <- read.csv(path_county_facts)
+county_dic <- read.csv(path_county_dic)
+# not lookup table lut <- c("PST045214" = "pop-2010", "PST120214" = "pop-change-2010to14")
+
+# to change column names
+# colnames(county_facts)[colnames(county_facts)=="PST045214"] <- "pop_2010"
+county_facts <- rename(county_facts, pop_2010 = PST045214)
+# county_facts <- rename(county_facts, replace = c("PST045214" = "pop_2010"))
+
+library(choroplethr)
+library(choroplethrMaps)
+
+county_facts$region = county_facts$fips
+county_facts$value = county_facts$pop_2010
+county_choropleth(county_facts, 
+                  title         = "title",
+                  legend        = "pop",
+                  # num_colors    = 2,
+                  state_zoom    = "california",
+                  reference_map = FALSE)
+
+```
+
+The FIPS county code is a five-digit Federal Information Processing Standard (FIPS) code (FIPS 6-4) which uniquely identifies counties and county equivalents in the United States, certain U.S. possessions, and certain freely associated states. The first two digits are the FIPS state code and the last three are the county code within the state or possession. On September 2, 2008, FIPS 6-4 was one of ten standards withdrawn by NIST as a Federal Information Processing Standard.[1] FIPS 6-4 was replaced by ANSI INCITS 31:2009.[2]
+
+County FIPS codes in the United States are usually (with a few exceptions) in the same sequence as alphabetized county names within the state. They are usually (but not always) odd numbers, so that new or changed county names can be fit in their alphabetical sequence slot.
+
+FIPS county codes are used by the Emergency Alert System (EAS) and NOAA Weather Radio (NWR) to define geographic locations for their SAME-based public alerting systems.[3] In this application, a "0" (zero) is added as the first digit and used as a "placeholder", making each FIPS code a six-digit sequence. In the future, the first digit may be utilized in this numerical scheme to represent a predefined county subdivision.
+
+https://www.census.gov/geo/reference/codes/cou.html
+
+```{r}
+# library(choroplethr)
+# library(choroplethrMaps)
+library(data.table)
+library(RColorBrewer)
+colorRampPalette(brewer.pal(9,"Reds"))(100)
+
+path_votes <- file.path("data/election-president-2016","votes.csv")
+# votes <- read.csv(path_votes)
+votes <-fread(path_votes)
+
+votes$region = votes$FIPS
+votes$value = votes$Trump
+county_choropleth(votes, 
+                  title         = "Trump",
+                  legend        = "% Trump",
+                  num_colors    = 1,
+                  state_zoom    = "california",
+                  reference_map = FALSE)
+```
+
+```{r}
+library(choroplethr)
+library(choroplethrMaps)
+library(data.table)
+library(RColorBrewer)
+library(ggplot2)
+
+# colorRampPalette(brewer.pal(9,"Reds"))(100)
+
+path_votes <- file.path("data/election-president-2016","votes.csv")
+# votes <- read.csv(path_votes)
+votes <-fread(path_votes)
+
+votes$region = votes$FIPS
+votes$value = 1 - votes$Trump # Trump column is % Trump, so (1 - Trump) = % HRC which maps nicely to built-in RdBu palette
+cal <- CountyChoropleth$new(votes)
+cal$set_zoom("california")
+election_palette <- c("#ff0000","#df002b","#80080","#80080","#80080","#80080","#0000ff")
+cal$ggplot_scale = scale_fill_brewer(name ="% of County voted HRC", palette = "RdBu", drop = FALSE)
+cal$render()
+
+```
+
