@@ -1,0 +1,59 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Coercion 
+Hierarchy: logical < integer < numeric < character
+```{r}
+c(TRUE, 1.5)
+c(TRUE, "hello")
+
+a <- c(1L , "I am a character")
+b <- c(TRUE, "Hello")
+c <- c(FALSE, 2)
+
+```
+
+factors
+```{r}
+# credit_rating character vector
+credit_rating <- c("BB", "AAA", "AA", "CCC", "AA", "AAA", "B", "BB")
+
+# Create a factor from credit_rating
+credit_factor <- factor(credit_rating)
+credit_factor
+
+# Call str() 
+str(credit_rating)
+str(credit_factor)
+
+levels(credit_factor)
+levels(credit_factor) <- c("2A", "3A", "1B", "2B", "3C")
+credit_factor
+
+```
+
+mine
+```{r}
+random100 <- runif(100, 1, 100)
+factor100 <- cut(random100, breaks = c(0,25,50,75,100))
+plot(factor100)
+```
+
+
+Ordering factors: two ways
+
+1. when creating factor, specify ordered = TRUE
+2. Use ordered(.) function
+
+```{r}
+
+# Variables
+credit_rating <- c("AAA", "A", "BB")
+bond_owners <- c("Dan", "Tom", "Joe")
+
+# Create the data frame of character vectors, bonds
+bonds <- data.frame(credit_rating, bond_owners, stringsAsFactors = FALSE)
+```
+

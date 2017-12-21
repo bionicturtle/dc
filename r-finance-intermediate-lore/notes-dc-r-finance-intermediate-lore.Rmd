@@ -1,0 +1,69 @@
+---
+title: "DC > Lore > intermediate finance"
+output: html_notebook
+---
+
+
+```{r}
+debt <- 5000    # initial debt
+i <- 0          # x axis counter
+x_axis <- i     # x axis
+y_axis <- debt  # y axis
+
+# Initial plot
+plot(x_axis, y_axis, xlim = c(0,10), ylim = c(0,5000))
+
+# Graph your debt
+while (debt > 0) {
+
+  # Updating variables
+  debt <- debt - 500
+  i <- i + 1
+  x_axis <- c(x_axis, i)
+  y_axis <- c(y_axis, debt)
+  
+  # Next plot
+  plot(x_axis, y_axis, xlim = c(0,10), ylim = c(0,5000))
+}
+
+```
+
+```{r}
+my.temp <- 1:10
+for (i in my.temp) {
+  print(i)
+}
+
+```
+
+
+## What are functions?
+
+func_name <- function(arguments) {
+  body
+}
+
+
+scoping
+```{r}
+percent_to_decimal <- function(percent) {
+    decimal <- percent / 100
+    decimal
+}
+
+percent_to_decimal(6)
+
+```
+
+#### packages
+
+CRAN comprehensive R Archive Network
+install.packages("quantmod")
+
+## 5. Why use apply family
+
+lapply()
+sapply()
+vapply()
+
+

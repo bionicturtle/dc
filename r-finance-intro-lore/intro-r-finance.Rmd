@@ -1,0 +1,75 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+Downloading files
+```{r}
+# Here are the URLs! As you can see they're just normal strings
+csv_url <- "http://s3.amazonaws.com/assets.datacamp.com/production/course_1561/datasets/chickwts.csv"
+tsv_url <- "http://s3.amazonaws.com/assets.datacamp.com/production/course_3026/datasets/tsv_data.tsv"
+
+# Read a file in from the CSV URL and assign it to csv_data
+csv_data <- read.csv(file = csv_url)
+
+# Read a file in from the TSV URL and assign it to tsv_data
+tsv_data <- read.delim(file = tsv_url)
+
+# Examine the objects with head()
+head(csv_data)
+head(tsv_data)
+
+```
+
+Saving raw files to disk
+```{r}
+# Download the file with download.file()
+download.file (url = csv_url, destfile = "feed_data.csv")
+
+# Read it in with read.csv()
+csv_data <- read.csv(file = "feed_data.csv")
+
+```
+
+Saving formatted files to disk
+```{r}
+# Add a new column: square_weight
+csv_data$square_weight <- csv_data$weight^2
+
+# Save it to disk with saveRDS()
+saveRDS(csv_data, "modified_feed_data.RDS")
+
+# Read it back in with readRDS()
+modified_feed_data <- readRDS("modified_feed_data.RDS")
+
+# Examine modified_feed_data
+str(modified_feed_data)
+
+```
+
+Understanding APIs
+```{r}
+install.packages("pageviews")
+library(pageviews)
+
+hadley_pageviews <- article_pageviews(project = "en.wikipedia", "Hadley Wickham")
+
+str(hadley_pageviews)
+```
+
+
+Using access tokens
+As we discussed in the last video, it's common for APIs to require access tokens - unique keys that verify you're authorised to use a service. They're usually pretty easy to use with an API client.
+
+```{r}
+api_key <- "d8ed66f01da01b0c6a0070d7c1503801993a39c126fbc3382"
+install.packages("birdnik")
+library(birdnik)
+vector_frequency <- word_frequency(api_key, "vector")
+vector_frequency
+```
+
+
+
