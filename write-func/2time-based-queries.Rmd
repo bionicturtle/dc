@@ -1,0 +1,44 @@
+---
+title: "Time-based queries"
+output: html_notebook
+---
+
+
+[ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
+
+```{r}
+library(xts)
+```
+
+
+### Querying for dates
+```{r}
+# Select all of 2016 from x
+x_2016 <- x["2016"]
+
+# Select January 2016 to March 22, 2016
+jan_march <- x["2016-01-01/2016-03-22"]
+```
+
+
+### Extracting recurring intraday intervals
+```{r}
+# Extract all data from irreg between 8AM and 10AM
+morn_2010 <- irreg["T08:00/T10:00"]
+
+# Extract the observations in morn_2010 for January 13th, 2010
+morn_2010["2010-01-13"]
+
+```
+
+### Row selection with time objects
+```{r}
+
+```
+
+### Update and replace
+```{r}
+
+```
+
+### ads

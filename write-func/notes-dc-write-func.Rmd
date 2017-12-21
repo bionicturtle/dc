@@ -1,0 +1,498 @@
+---
+title: "notes: dc/writing functions"
+output: html_notebook
+---
+
+## 1. Refresher; function template
+## 2. When and how should you write a function?
+## 3. Why functional programming?
+## 4. Dealing with failure
+
+```{r}
+setwd("D:/GitHub/dc/write-func")
+```
+
+
+## 1. Refresher; function template
+
+my_fun <- function(arg1, arg2) {
+  body
+}
+
+The last expression evaluated in a function is the return value
+
+Functions fundamentals
+
+1. Formal arguments
+2. Body
+3. Environment
+
+```{r}
+add <- function(x, y=1) {
+  x+y
+}
+formals(add)
+body(add)
+environment(add)
+```
+
+My Black-Scholes
+```{r}
+
+BlackScholes_call <- function(S, K, r, sigma, T) {
+  d1 <- (log(S/K) + (r + sigma^2/2)*T)/(sigma*sqrt(T))
+  d2 <- d1 - sigma*sqrt(T)
+  Nd1 <- pnorm(d1)
+  Nd2 <- pnorm(d2)
+  c <- S*Nd1 - K*exp(-r*T)*Nd2
+  c
+}
+```
+
+
+Environments
+Scoping describes WHERE, not when, to look for a value
+
+* When you call a function, a new environment is made for the function
+* The new environment is populated with the argument values
+* Objects are looked for first in this environment
+* If they are not found, they are looked for in the environment that the function was created in
+
+```{r}
+# 1
+y <- 10
+f <- function(x) {
+  x + y 
+}
+f(10)
+# returns 20; because y is not passed as an argument to the function, R looks outside of the function environment
+
+# 2
+y <- 10
+f <- function(x) {
+  y <- 5
+  x + y
+}
+f(10)
+#returns 15; the value of y is defined inside of the function
+
+# 3
+f <- function(x) {
+  y <- 5
+  x + y
+}
+f(5)
+# what is value of y the variable? 
+# Answer: object 'y' not found; i.e., does not exist in the global environment
+
+```
+
+
+### Data structures
+
+Two types of vectors in R: atomic, lists.
+
+* Atomic vectors: logical, integer, double, character, complex, raw
+* Lists; aka recursive vectors can contain heterogeneous objects
+
+Every vector has two key properties
+
+* typeof()
+* length()
+
+Missing values
+
+* NULL indicates absence of a vector
+* NA aka missing value; NA is a missing element inside a vector
+* is.na() returns a logical
+* missing values are contagious
+
+### Lists
+
+Contain heterogeneous objects
+Created with list()
+
+* Single [ extracts sublist
+* [[ and $ extract elements
+
+
+### for loops
+
+seq_along() generates a sequence along the index of the object passed to it
+
+
+```{r}
+
+# Arguments
+# Rewrite the call to follow best practices
+mean(0.1,x=c(1:9, NA),TRUE)
+mean(x = c(1:9, NA), trim = 0.1, na.rm = TRUE)
+mean(c(1:9, NA), trim = 0.1, na.rm = TRUE)
+
+f <- function(x) {
+  if (TRUE) {
+    return(x + 1)
+  }
+  x
+}
+
+y <- 10
+f <- function(x) {
+  print(environment(y))
+  x + y
+}
+environment(f)
+environment(y)
+f(10)
+# Correct! Because y is not passed in as an argument to the function, R looks outside of the function environment.
+
+y <- 10
+f <- function(x) {
+  y <- 5
+  x + y
+}
+
+
+df <- data.frame(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+df <- data.frame()
+1:ncol(df)
+
+for (i in 1:ncol(df)) {
+  print(median(df[[i]]))
+}
+
+
+# Replace the 1:ncol(df) sequence
+for (i  in seq_along(df)) {
+  print(median(df[[i]]))
+}
+
+# Change the value of df
+df <- data.frame()
+
+# Repeat for loop to verify there is no error
+for (i in seq_along(df)) {
+  print(median(df[[i]]))
+}
+
+
+```
+
+## 2. When and how should you write a function?
+
+
+```{r}
+# Define example vector x
+x <- 1:10 
+
+# Use the function template to create the rescale01 function
+rescale01 <- function(x) {
+  rng <- range(x, na.rm = TRUE)
+  (x - rng[1]) / (rng[2]- rng[1])
+}
+
+rescale01(x)
+```
+
+### How should you write a function?
+
+Start with a simple problem,
+get a working code snippet
+rewrite using temp variables
+rewrite for clarity
+finally, turn snippet into function
+
+```{r}
+# Define example vectors x and y
+x <- c( 1, 2, NA, 3, NA)
+y <- c(NA, 3, NA, 3,  4)
+
+# Turn this snippet into a function: both_na()
+both_na <- function(x, y) {
+  sum(is.na(x) & is.na(y))
+}
+```
+
+### How can you write a good function?
+
+Should be both correct and understandable
+
+Naming principles
+
+* use verbs for function names; e.g., add_row()
+
+Exercise
+This is a case where an early return() makes sense. If x is empty, the function should immediately return c(-Inf, Inf).
+
+```{r}
+
+mean_ci <- function(x, level = 0.95) {
+  if (length(x) == 0) {
+    warning("`x` was empty", call. = FALSE)
+    return(c(-Inf, Inf))
+  }
+  se <- sd(x) / sqrt(length(x))
+  alpha <- 1 - level
+  mean(x) + se * qnorm(c(alpha / 2, 1 - alpha / 2))
+}
+
+### Next function is improved as follows
+
+replace_missings <- function(x, replacement) {
+  is_miss <- is.na(x)
+  x[is_miss] <- replacement
+  
+  # Rewrite to use message()
+  message(paste(sum(is_miss),"missings replaced by the value", replacement))
+  x
+}
+
+# Check your new function by running on df$z
+df$z <- replace_missings(df$z, 0)
+
+```
+
+
+## 3. Why functional programming?
+
+purr package
+
+```{r}
+
+df <- data.frame(
+  a = rnorm(10),
+  b = rnorm(10),
+  c = rnorm(10),
+  d = rnorm(10)
+)
+
+# Initialize output vector
+output <- vector("double", ncol(df))  
+
+# Fill in the body of the for loop
+for (i in seq_along(df)) {            
+  output[[i]] <- median(df[[i]], na.rm=TRUE)
+}
+
+# View the result
+output
+
+# But this can be a function
+
+col_median <- function(df) {
+  output <- vector("double", ncol(df))
+  for (i in seq_along(df)) {
+    output[[i]] <- median(df[[i]])  # df[[i]] returns the ith column as numeric vector; df[i] returns the ith column as df
+  }
+  output
+}
+
+
+# Add a second argument called power
+f <- function(x, power) {
+  # Edit the body to return absolute deviations raised to power
+  abs(x - mean(x))^power
+}
+
+```
+
+### Functions can be arguments, too
+
+```{r}
+
+# this is essentiallly our own sapply()
+col_summary <- function(df, fun) {
+  output <- vector("numeric", length(df))
+  for (i in seq_along(df)) {
+    output[[i]] <- fun(df[[i]])
+  }
+  output
+}
+
+col_summary(df, median)
+
+
+```
+
+### Introducing purrr
+
+map(.x, .f, ...)
+
+The map functions
+
+All the map functions in purrr take a vector, .x, as the first argument, then return .f applied to each element of .x. The type of object that is returned is determined by function suffix (the part after _):
+
+* map() returns a list or data frame
+* map_lgl() returns a logical vector
+* map_int() returns a integer vector
+* map_dbl() returns a double vector
+* map_chr() returns a character vector
+
+```{r}
+# library(purrr)
+
+data("mtcars")
+cyl <- split(mtcars, mtcars$cyl)
+
+# Examine the structure of cyl
+str(cyl)
+
+# Extract the first element into four_cyls
+four_cyls <- cyl[[1]]
+
+# Fit a linear regression of mpg on wt using four_cyls
+lm(mpg ~ wt, four_cyls)
+
+# Rewrite to call an anonymous function
+map(cyl, function(df) lm(mpg ~ wt, data = df))
+
+# Rewrite to use the formula shortcut instead
+# map(cyl, function(df) lm(mpg ~ wt, data = df))
+map(cyl, ~ lm(mpg ~ wt, data = .))
+
+# Save the result from the previous exercise to the variable models
+models <- map(cyl, ~ lm(mpg ~ wt, data = .))
+
+# Use map and coef to get the coefficients for each model: coefs
+coefs <- map(models, coef)
+
+# Use string shortcut to extract the wt coefficient 
+map(coefs, "wt")
+
+
+# with pipes
+
+# Define models (don't change)
+models <- mtcars %>% 
+  split(mtcars$cyl) %>%
+  map(~ lm(mpg ~ wt, data = .))
+
+# Rewrite to be a single command using pipes 
+models %>% map(summary) %>% map_dbl("r.squared")
+
+```
+
+## 4. Dealing with failure
+
+purrr package: 
+
+* safely() "capture side effects" and plays nicely with map() functions
+* possibly()
+* quietly()
+
+```{r}
+library(purrr)
+map(list(5,10,20), rnorm)
+
+# map2() to iterate over two arguments
+map2(list(5,10,20), list(1, 5, 10), rnorm)
+
+# pmap() to iterate over many arguments
+print("this is pmap ....")
+pmap(list(n = list(5, 10, 20),
+          mean = list(1, 5, 10), 
+          sd = list(0.1, 0.5, 0.1)), rnorm)
+
+# invoke_map() to iterate over functions
+invoke_map(list(rnorm, runif, rexp), n = 7)
+
+```
+
+Exercises
+```{r}
+# Initialize n and mu
+n <- list(5, 10, 20)
+mu <- list(1, 5, 10)
+
+# Create a sd list with the values: 0.1, 1 and 0.1
+sd <- list(.1, 1, .1)
+
+# Edit this call to pmap() to iterate over the sd list as well
+pmap(list(n, mu, sd), rnorm)
+```
+
+```{r}
+# Define list of functions
+f <- list("rnorm", "runif", "rexp")
+
+# Parameter list for rnorm()
+rnorm_params <- list(mean = 10)
+
+# Add a min element with value 0 and max element with value 5
+runif_params <- list(min = 0, max = 5)
+
+# Add a rate element with value 5
+rexp_params <- list(rate = 5)
+
+# Define params for each function
+params <- list(
+  rnorm_params,
+  runif_params,
+  rexp_params
+)
+
+# Call invoke_map() on f supplying params as the second argument
+invoke_map(f, n = 5, params)
+```
+
+walk() operates just like map() except it's designed for functions that don't return anything. You use walk() for functions with side effects like printing, plotting or saving.
+
+```{r}
+# Define list of functions
+f <- list(Normal = "rnorm", Uniform = "runif", Exp = "rexp")
+
+# Define params
+params <- list(
+  Normal = list(mean = 10),
+  Uniform = list(min = 0, max = 5),
+  Exp = list(rate = 5)
+)
+
+# Assign the simulated samples to sims
+sims <- invoke_map(f, params, n = 50)
+
+# Use walk() to make a histogram of each element in sims
+walk(sims, hist)
+```
+
+```{r}
+# Define list of functions
+f <- list(Normal = "rnorm", Uniform = "runif", Exp = "rexp")
+
+# Define params
+params <- list(
+  Normal = list(mean = 10),
+  Uniform = list(min = 0, max = 5),
+  Exp = list(rate = 5)
+)
+
+# Assign the simulated samples to sims
+sims <- invoke_map(f, params, n = 50)
+
+
+breaks_list <- list(
+  Normal = seq(6, 16, 0.5),
+  Uniform = seq(0, 5, 0.25),
+  Exp = seq(0, 1.5, 0.1)
+)
+
+# Use walk2() to make histograms with the right breaks
+walk2(sims, breaks_list, hist)
+
+```
+
+
+## 5. Robust functions
+
+```{r}
+options() # global options
+getOption("digits")
+
+```
+
