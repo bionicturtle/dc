@@ -1,0 +1,189 @@
+---
+title: "dc/Intro to data"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+library(dplyr)
+library(openintro)
+data("hsb2")
+# load("evals.RData")
+# load("ucb_admit.RData")
+# load("us_regions.RData")
+```
+
+Categorical data
+
+* droplevels() removes unused factor levels
+
+```{r}
+table(hsb2$schtyp)
+
+# pipe
+# x %>% f(y) becomes f(x,y)
+hsb2_public <- hsb2 %>% 
+  filter(schtyp == "public")
+
+3 %>% sum(4)
+
+```
+
+Discretize a varible
+```{r}
+# Calculate median number of characters: med_num_char
+med_num_char <- median(email50$num_char)
+
+# Create num_char_cat variable in email50
+email50 <- email50 %>%
+  mutate(num_char_cat = ifelse(num_char < med_num_char, "below median", "at or above median"))
+  
+# Count emails in each category
+table(email50$num_char_cat)
+```
+
+```{r}
+library(ggplot2)
+# Create number_yn column in email50
+email50 <- email50 %>%
+  mutate(number_yn = ifelse(number == "none", "no", "yes"))
+
+# Visualize number_yn
+ggplot(email50, aes(x = number_yn)) +
+  geom_bar()
+
+# Load ggplot2
+library(ggplot2)
+
+# Scatterplot of exclaim_mess vs. num_char
+ggplot(email50, aes(x = num_char, y = exclaim_mess, color = factor(spam))) +
+  geom_point()
+```
+
+## 2. Observational studies and experiments
+
+Explanatory (x) and response (y) variables
+
+* Observational: only correlation
+* Experiment: causation can be inferred (because confounding variables are probably equally distributed)
+
+Random sampling: representative, can be generalized
+
+Simpson's paradox
+
+```{r}
+load("ucb_admit.RData")
+library(dplyr)
+library(tidyr)
+
+# Count number of male and female applicants admitted
+ucb_counts <- ucb_admit %>%
+  count(Gender, Admit)
+
+# View result
+ucb_counts
+
+# Spread the output across columns
+ucb_counts %>%
+  spread(Admit, n)
+
+```
+
+```{r}
+ucb_admit %>%
+  # Table of counts of admission status and gender
+  count(Gender, Admit) %>%
+  # Spread output across columns based on admission status
+  spread(Admit, n) %>%
+  # Create new variable
+  mutate(Perc_Admit = Admitted / (Admitted + Rejected))
+```
+
+
+```{r}
+# Table of counts of admission status and gender for each department
+
+admit_by_dept_not_spread <- ucb_admit %>%
+  count(Dept, Gender, Admit)
+admit_by_dept_not_spread
+
+
+admit_by_dept <- ucb_admit %>%
+  count(Dept, Gender, Admit) %>%
+  spread(Admit, n)
+
+# View result
+admit_by_dept
+
+# Percentage of those admitted to each department
+admit_by_dept %>%
+  mutate(Perc_Admit = Admitted / (Admitted + Rejected))
+```
+
+## 3. Sampling strategies
+
+* Simple random sample: i.i.d from the population
+* Stratified sampling: strata are homogenous WITHIN strata
+* Cluster sampling: clusters are heterogeneous within cluster; e.g., divide a city into regions
+* Multistage sampling: clusters, random samples, then sample within clusters
+
+```{r}
+library(openintro)
+library(dplyr)
+data("county")
+
+county_noDC <- county %>%
+  filter(state != "District of Columbia") %>%
+  droplevels()
+
+county_srs <- county_noDC %>%
+  sample_n(size = 150)
+
+country_strata <- county_noDC %>% # has same 3142 observations
+  group_by(state)
+# Most data operations are done on groups defined by variables. group_by() takes an existing tbl and converts it into a grouped tbl where operations are performed "by group". ungroup() removes grouping.
+
+country_str <- county_noDC %>%
+  group_by(state) %>%
+  sample_n(size = 3)
+
+
+```
+
+Simple random sample in R
+```{r}
+load("us_regions.RData")
+# Simple random sample: states_srs
+states_srs <- us_regions %>%
+  sample_n(size = 8)
+
+# Count states by region
+states_srs %>%
+  group_by(region) %>%
+  count()
+```
+
+Stratified sample in R
+```{r}
+# Stratified sample
+states_str <- us_regions %>%
+  group_by(region) %>%
+  sample_n(size = 2)
+
+# Count states by region
+states_str %>%
+  group_by(region) %>%
+  count()
+
+```
+
+Principles of experimental design
+
+* Control
+* Randomize
+* Replicate
+* Block
+

@@ -1,0 +1,337 @@
+---
+title: "notes dc/import-financial-data"
+output: html_notebook
+---
+
+Retreive from yahoo finance (default)
+```{r}
+
+# Load the quantmod package
+# library(quantmod)
+
+# Import QQQ data from Yahoo! Finance
+QQQ <- getSymbols("QQQ", auto.assign = FALSE)
+# auto.assign = TRUE loads to env; ie, workspace
+
+# Look at the structure of the object getSymbols created
+str(QQQ)
+
+# Look at the first few rows of QQQ
+head(QQQ)
+
+```
+
+Retrieve from google and FRED
+```{r}
+# Import QQQ data from Google Finance
+QQQ <- getSymbols("QQQ", src = "google", auto.assign = FALSE)
+
+# Look at the structure of QQQ
+str(QQQ)
+
+# Import GDP data from FRED
+GDP <- getSymbols("GDP", src = "FRED", auto.assign = FALSE)
+
+# Look at the structure of GDP
+str(GDP)
+```
+
+Quandl
+```{r}
+#library(Quandl)
+# gdp <- Quandl("FRED/GDP")
+# str(gdp)
+
+# Import GDP data from FRED as xts
+gdp_xts <- Quandl(code = "FRED/GDP", type = "xts")
+
+# Look at the structure of gdp_xts
+str(gdp_xts)
+
+# Import GDP data from FRED as zoo
+gdp_zoo <- Quandl(code = "FRED/GDP", type= "zoo")
+
+# Look at the structure of gdp_zoo
+str(gdp_zoo)
+
+```
+
+currency pairs
+```{r}
+# Create a currency_pair object
+currency_pair <- "GBP/CAD"
+
+# Load British Pound to Canadian Dollar exchange rate data
+getSymbols(currency_pair, src = "oanda")
+
+# Examine object using str()
+str(GBPCAD)
+
+# Try to load data from 190 days ago
+getSymbols(currency_pair, from = Sys.Date() - 190, to = Sys.Date(), src = "oanda")
+```
+
+```{r}
+# Create a series_name object
+series_name <- "UNRATE" 
+
+# Load the data using getSymbols
+getSymbols(series_name, src = "FRED")
+
+# Create a quandl_code object
+quandl_code <- "FRED/UNRATE"
+
+# Load the data using Quandl
+unemploy_rate <- Quandl(quandl_code)
+```
+
+### Extracting specific columns
+```{r}
+load("DC.RData")
+library(quantmod)
+
+# Look at the head of DC
+head(DC)
+
+# Extract the close column
+dc_close <- Cl(DC)
+
+# Look at the head of dc_close
+head(dc_close)
+
+# Extract the volume column
+dc_volume <- Vo(DC)
+
+# Look at the head of dc_volume
+head(dc_volume)
+
+```
+
+
+getPrice()
+
+Use getPrice to extract other columns
+The extractor functions you learned in the previous two exercises do not cover all use cases. Sometimes you might have one object that contains the same price column for multiple instruments. Other times, you might have an object with price data (e.g. bid and/or ask prices) that do not have an explicit extractor function.
+
+The quantmod package also provides a getPrice() function that is flexible enough to handle these cases. You can extract a column with any name (e.g. bid, ask, trade) with it by specifying the name via the prefer argument. It is also useful if you have an object that contains multiple instruments with the same price type, because you can use the symbol argument to extract columns for a specific instrument.
+
+You can use regular expressions for both the prefer and symbol arguments, because they are passed to the base::grep() function internally.
+
+```{r}
+library(Quandl)
+
+# Download CME data for CL and BZ as an xts object
+oil_data <- Quandl(code = c("CME/CLH2016", "CME/BZH2016"), type = "xts")
+
+# Look at the column names of the oil_data object
+colnames(oil_data)
+
+# Extract the Open price for CLH2016
+cl_open <- getPrice(oil_data, symbol = "CLH2016", prefer = "Open$")
+
+# Look at January, 2016 using xts' ISO-8601 subsetting
+cl_open["2016-01"]
+
+
+```
+
+### loading and transforming multiple instruments
+
+Quandle documentation (eg, rdiff transformation) https://docs.quandl.com/
+
+Quandle
+
+* collapse() to aggregate
+* transform() 
+
+```{r}
+# CL and BZ Quandl codes
+quandl_codes <- c("CME/CLH2016","CME/BZH2016")
+
+# Download quarterly CL and BZ prices
+qtr_price <- Quandl(quandl_codes, collapse = "quarterly", type = "xts")
+
+# View the high prices for both series
+Hi(qtr_price)
+
+# Download quarterly CL and BZ returns
+qtr_return <- Quandl(quandl_codes, collapse = "quarterly", type = "xts", transform = "rdiff")
+
+# View the settle price returns for both series
+getPrice(qtr_return, prefer="Settle")
+```
+
+Combine objects from an environment using do.call and eapply
+While Quandl() makes it easy to request common aggregations and transformations, there may be times where you need to aggregate or transform your data in ways Quandl() does not support. In those cases, you can use the flexibility of R.
+
+One paradigm you can use in the quantmod workflow involves environments. Store all your data in one environment. Then you can use eapply() to call a function on each object in the environment, much like what lapply() does for each element of a list. Also like lapply(), eapply() returns a list.
+
+Then you can merge all the elements of the list into one object by using do.call(), which is like having R programmatically type and run a command for you. Instead of typing merge(my_list[[1]], my_list[[2]]], ...), you can type do.call(merge, my_list)
+
+```{r}
+# Call head on each object in data_env using eapply
+data_list <- eapply(data_env, head)
+
+# Merge all the list elements into one xts object
+data_merged <- do.call(merge, data_list)
+
+# Ensure the columns are ordered: open, high, low, close
+data_ohlc <- OHLC(data_merged)
+```
+
+Using quantmod to download multiple instruments
+```{r}
+# Symbols
+symbols <- c("AAPL", "MSFT", "IBM")
+
+# Create new environment
+data_env <- new.env()
+
+# Load symbols into data_env
+getSymbols(symbols, env=data_env)
+
+# Extract the close column from each object and combine into one xts object
+close_data <- do.call(merge, eapply(data_env, Cl))
+
+# View the head of close_data
+head(close_data)
+```
+
+## 3. Managing data from multiple sources
+
+setDefaults()
+
+* set new default arguments using name = value pairs
+* only alters behavior for getSymbols
+* Stores values in global options
+
+getDefaults
+
+```{r}
+# Set the default to pull data from Google Finance
+setDefaults(getSymbols, src = "google")
+
+# Get GOOG data
+getSymbols("GOOG")
+
+# Verify the data was actually pulled from Google Finance
+str(GOOG)
+```
+
+```{r}
+# Look at getSymbols.yahoo arguments
+args(getSymbols.yahoo)
+
+# Set default 'from' value for getSymbols.yahoo
+setDefaults(getSymbols.yahoo, from = "2000-01-01")
+
+# Confirm defaults were set correctly
+getDefaults(getSymbols.yahoo)
+getDefaults("getSymbols.yahoo") # this is the DC answer; can be either apparently
+```
+
+### Setting per-instrument default arguments
+
+setSymbolLookup() 
+
+```{r}
+# Look at the first few rows of CP
+# head(CP)
+
+# Set the source for CP to FRED
+setSymbolLookup(CP = "FRED")
+
+# Load CP data again
+getSymbols("CP")
+
+# Look at the first few rows of CP
+head(CP)
+```
+
+Save and load symbol lookup table
+```{r}
+# Save symbol lookup table
+saveSymbolLookup("my_symbol_lookup.rda")
+
+# Set default source for CP to "yahoo"
+setSymbolLookup(CP = "yahoo")
+
+# Verify the default source is "yahoo"
+getSymbolLookup("CP")
+
+# Load symbol lookup table
+loadSymbolLookup("my_symbol_lookup.rda")
+
+# Verify the default source is "FRED"
+getSymbolLookup("CP")
+
+```
+
+## Handling instrument symbols that are NOT syntactically valid
+
+e.g., "^GSPC" circumflex is not valid
+e.g., Shanghai Stock Exchange Composite Index: "000001.SS"
+
+ways to handle
+
+1. surround with backticks: `
+2. use get()
+3. auto.assign = FALSE
+
+Access the object using get() or backticks
+At some point, you might download data for an instrument that does not have a syntactically valid name. Syntactically valid names contain letters, numbers, ".", and "_", and must start with a letter or a "." followed by a non-number.
+
+For example, the symbol for Berkshire Hathaway class A shares is "BRK-A", which is not a syntactically valid name because it contains a "-" character. Another example are Chinese stocks, which have symbols composed of numbers. The Yahoo Finance symbol for the SSE Composite Index is "000001.SS".
+
+You can use the get function or backticks (`) to access objects that do not have syntactically valid names.
+
+```{r}
+getSymbols("BRK-A")
+```
+
+Create valid name for one instrument
+If you are only downloading data for a single symbol and that symbol is not a syntactically valid name, you can set auto.assign = FALSE in your call to getSymbols(). That will allow you to directly assign the output to a syntactically valid name.
+
+You may also want to convert the column names to syntactically valid names. That is a good idea if you plan to use the data in functions that expect column names to be syntactically valid names (e.g. lm()).
+```{r}
+# Load BRK-A data
+getSymbols("BRK-A")
+
+# Use backticks and head() to look at the loaded data
+head(`BRK-A`)
+
+# Use get() to assign the BRK-A data to an object named BRK.A
+BRK.A <- get("BRK-A")
+```
+
+```{r}
+# Create BRK.A object
+BRK.A <- getSymbols("BRK-A", auto.assign = FALSE)
+
+# Create col_names object with the column names of BRK.A
+col_names <- colnames(BRK.A)
+
+# Set BRK.A column names to syntactically valid names
+colnames(BRK.A) <- make.names(col_names) # make syntactically valid names out of character vectors
+```
+
+Create valid names for multiple instruments
+In an earlier exercise, you learned how to use setSymbolLookup() to set a default data source for getSymbols(). You can also use setSymbolLookup() to create a mapping between the instrument symbol and the name of the R object.
+
+This is useful if you want to download data for a lot symbols that are not syntactically valid names, or symbols that have names that conflict with other R variable names.
+
+An example of a name that conflicts is the symbol for AT&T's stock, T, which is often used as a short form for the logical value TRUE.
+
+To change the name of a given symbol, arguments must be passed to setSymbolLookup() as a list, like so: setSymbolLookup(NEW_NAME = list(name = "OLD_NAME")).
+
+```{r}
+# Set name for BRK-A to BRK.A
+setSymbolLookup(BRK.A = list(name = "BRK-A"))
+
+# Set name for T (AT&T) to ATT
+setSymbolLookup(ATT = list(name = "T"))
+
+# Load BRK.A and ATT data
+getSymbols(c("BRK.A", "ATT"))
+```
+
