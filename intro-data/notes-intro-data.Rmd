@@ -187,3 +187,14 @@ Principles of experimental design
 * Replicate
 * Block
 
+## 4. Case Study
+
+```{r}
+library(dplyr)
+load("evals.RData")
+glimpse(evals)
+```
+
+variables in the data
+
+
