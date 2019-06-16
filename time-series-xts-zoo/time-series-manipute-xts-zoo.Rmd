@@ -1,0 +1,160 @@
+---
+title: "Manipulating time series data in R with xts and zoo"
+output: html_notebook
+---
+
+What is xtx? eXtensible Time Series (extended zoo object; xts is subclass of zoo)
+observations + time
+xts = matrix + time (index in increasing order of time)
+
+The xts constructor
+xts(x = NULL,
+    order.by = index(x),
+    frequency = NULL,
+    unique = TRUE,
+    tzone = Sys.getenv("TZ"),
+    ...)
+
+Special xts behavior
+
+* xts is a matrix with associated times for each observation
+* Subsets preserve matrix form
+* Attributes are preserved; i.e. a time-stamp that was acquired
+* xts is a subclass of zoo
+
+It is best to think of xts objects as normal R matrices, but with special powers. These powers let you manipulate your data as a function of time, as your data is now self-aware of when it exists in time. Before we can start to exploit these powers, it will be helpful to see how xts objects relate to their base-R relatives.
+
+```{r}
+library(xts)
+x <- matrix(1:4, ncol = 2, nrow = 2)
+idx <- as.Date(c("2015-01-01", "2015-02-01"))
+x <- xts(x, order.by = idx) # xts constructor
+x
+x <- matrix(c(rep(1,3),rep(2,3)), ncol=2, nrow=3)
+idx <- as.Date(c("2016-06-01","2016-06-02","2016-06-03"))
+ex_matrix <- xts(x, order.by = idx)
+ex_matrix
+str(ex_matrix)
+```
+
+### First xts object
+The main xts constructor takes a number of arguments, but the two most important are x for the data and order.by for the index. x must be a vector or matrix. order.by is a vector which must be the same length or number of rows as x, be a proper time or date object (very important!), and be in increasing order.
+
+xts also allows you to bind arbitrary key-value attributes to your data. This lets you keep metadata about your object inside your object. To add these at creation, you simply pass additional name = value arguments to the xts() function.
+
+
+```{r}
+# Create the object data using 5 random numbers
+data <- rnorm(5)
+
+# Create dates as a Date class object starting from 2016-01-01
+dates <- seq(as.Date("2016-01-01"), length = 5, by = "days")
+
+# Use xts() to create smith
+smith <- xts(x = data, order.by = dates)
+
+# Create bday (1899-05-08) using a POSIXct date class object
+bday <- as.POSIXct("1899-05-08")
+my_bday <- as.POSIXct("1967-01-24")
+
+# Create hayek and add a new attribute called born
+hayek <- xts(x = data, order.by = dates, born = bday) # born = day is arbitrary key-value attribute
+harper <- xts(x = data, order.by = dates, born = my_bday, color = "red") # born = day is arbitrary key-value attribute
+```
+
+
+### deconstructing xts
+At the core of both xts and zoo is a simple R matrix with a few additional attributes. The most important of these attributes is the index. The index holds all the information we need for xts to treat our data as a time series.
+
+When working with time series, it will sometimes be necessary to separate your time series into its core data and index attributes for additional analysis and manipulation. The core data is the matrix portion of xts. You can separate this from the xts object using coredata(). The index portion of the xts object is available using the index() function. Note that both of these functions are methods from the zoo class, which xts extends.
+
+```{r}
+# Extract the core data of hayek
+hayek_core <- coredata(hayek)
+
+# View the class of hayek_core
+class(hayek_core)
+
+# Extract the index of hayek
+hayek_index <- index(hayek)
+
+# View the class of hayek_index
+class(hayek_index)
+
+```
+
+### time based indices
+xts objects get their power from the index attribute that holds the time dimension. One major difference between xts and most other time series objects in R is the ability to use any one of various classes that are used to represent time. Whether POSIXct, Date, or some other class, xts will convert this into an internal form to make subsetting as natural to the user as possible.
+
+```{r}
+a <- xts(x = 1:2, as.Date("2012-01-01") + 0:1)
+a[index(a)]
+```
+
+We'll get into more detail on subsetting xts objects in a later chapter. For now you can simply use date objects to index appropriate rows from your time series. You can think of this as effectively matching the rownames you see in the object. This works as anticipated for time objects because the rownames are really dates!
+
+```{r}
+# Create dates
+dates <- as.Date("2016-01-01") + 0:4
+
+# Create ts_a
+ts_a <- xts(x = 1:5, order.by = dates)
+
+# Create ts_b
+ts_b <- xts(x = 1:5, order.by = as.POSIXct(dates))
+
+# Extract the rows of ts_a using the index of ts_b
+ts_a[index(ts_b)]
+
+# Extract the rows of ts_b using the index of ts_a
+ts_b[index(ts_a)]
+
+```
+
+Converting xts objects
+```{r}
+# Convert austres to an xts object called au
+au <- as.xts(austres)
+
+# Convert your xts object (au) into a matrix am
+am <- as.matrix(au)
+
+# Convert the original austres into a matrix am2
+am2 <- as.matrix(austres)
+```
+
+Importing data
+```{r}
+# Create dat by reading tmp_file
+dat <- read.csv(tmp_file)
+
+# Convert dat into xts
+xts(dat, order.by = as.Date(rownames(dat), "%m%d%Y"))
+
+# Read tmp_file using read.zoo and as.xts
+dat_xts <- as.xts(read.zoo(tmp_file, index.column = 0, sep = ",", format = "%m/%d/%Y"))
+```
+
+Exporting xts objects
+```{r}
+# Convert sunspots to xts using as.xts(). Save this as sunspots_xts
+sunspots_xts <- as.xts(sunspots)
+
+# Get the temporary file name
+tmp <- tempfile()
+
+# Write the xts object using zoo to tmp 
+write.zoo(sunspots_xts, sep = ",", file = tmp)
+
+# Read the tmp file. FUN = as.yearmon converts strings such as Jan 1749 into a proper time class
+sun <- read.zoo(tmp, sep = ",", FUN = as.yearmon)
+
+# Convert sun into xts. Save this as sun_xts
+sun_xts <- as.xts(sun)
+
+```
+
+
+
+
+
